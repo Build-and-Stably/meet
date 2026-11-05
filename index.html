@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>회의시간 맞추기</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #F3F5F4; }
+    iframe { display: block; width: 100%; height: 100%; border: 0; }
+    p { font: 15px/1.6 system-ui, "Malgun Gothic", sans-serif; color: #17201C; padding: 24px; margin: 0; }
+  </style>
+</head>
+<body>
+  <!--
+    짧은 시작 주소. #r=... 처럼 # 뒤에 붙은 값은 브라우저 밖으로 나가지 않아서
+    깃허브 서버에는 키가 전달되지 않는다. 그 값을 구글 웹앱 주소의 ? 뒤로 넘겨 띄운다.
+  -->
+  <iframe id="app" title="회의시간 맞추기" allow="clipboard-write"></iframe>
+  <noscript><p>이 페이지는 자바스크립트가 필요해요.</p></noscript>
+  <script>
+    var EXEC = 'https://script.google.com/macros/s/AKfycby-mIaJei2C6mTcjgvorCaPvdA2gsPyqpzAjEY9nmcZSFs2oET_KAeTNULx-g8PMKac/exec';
+    var q = location.hash.slice(1);
+    if (!/^[A-Za-z0-9_=&-]*$/.test(q)) q = '';
+    document.getElementById('app').src = EXEC + (q ? '?' + q : '');
+  </script>
+</body>
+</html>
