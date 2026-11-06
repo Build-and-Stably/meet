@@ -473,15 +473,19 @@ function detectBusyFromPixels(data, W, H) {
 }
 
 /* ================= 학기 시간표 올리기 (담당자·관리자 함께 씀) ================= */
-// 담당자는 모든 시간표를, 관리자는 자기가 올린 시간표만 고친다(profs 중 mine 인 것). 서버가 한 번 더 확인한다.
-const TT = { queue: [], pendingDel: null, reading: false };
+// 담당자는 모든 시간표를 고치고 어느 관리자용인지 정한다(owner). 관리자는 자기가 올린 시간표만 고친다. 서버가 한 번 더 확인한다.
+// 시간표는 그 관리자의 회의에서만 고를 수 있다.
+const TT = { queue: [], pendingDel: null, reading: false, owner: '' };
 const ttOn = () => CTX.mode === 'master' || (CTX.mode === 'admin' && !A.result && A.tab === 'profs');
 const ttData = () => CTX.mode === 'master' ? M.data : A.data;
 const ttRender = () => CTX.mode === 'master' ? renderMaster() : renderAdmin();
 function timetableHTML(d) {
   const ex = TT.queue[0], master = CTX.mode === 'master', mine = byName(d.profs.filter(p => p.mine));
+  const orphans = master ? mine.filter(p => !p.owner).length : 0;
   return `
-  ${master ? '' : `<div class="note"><b>내 시간표</b><span>여기 올린 시간표는 ${esc(d.me.name)}님이 만드는 회의에서만 고를 수 있어요. 교수학습혁신센터가 올린 시간표는 다시 올리지 않아도 회의 만들기에 나와요.${d.semester.purge ? ` <span class="mono">${esc(d.semester.purge)}</span>이 지나면 자동으로 지워져요.` : ''}</span></div>`}
+  ${master ? '' : `<div class="note"><b>내 시간표</b><span>여기 올린 시간표는 ${esc(d.me.name)}님이 만드는 회의에서만 고를 수 있어요. 다른 관리자에게는 보이지 않아요.${d.semester.purge ? ` <span class="mono">${esc(d.semester.purge)}</span>이 지나면 자동으로 지워져요.` : ''}</span></div>`}
+  ${master && orphans ? `<div class="note warn"><b>쓰는 관리자 없음</b><span>예전에 공용으로 올린 시간표 ${orphans}명은 지금 어느 관리자의 회의에도 나오지 않아요. 한꺼번에 넘기거나, 고치기를 눌러 한 명씩 정하세요.</span></div>
+  <form class="panel form" id="orphan-form">${ownerSelectHTML(TT.owner).replace('id="ex-owner"', 'id="orphan-owner"')}<div class="field" style="justify-content:flex-end"><button class="btn primary" type="submit">${orphans}명 모두 넘기기</button></div></form>` : ''}
   <div class="panel">
     <h3>시간표 올리기</h3>
     ${ex ? extractHTML(ex) : `
@@ -494,9 +498,9 @@ function timetableHTML(d) {
   <div class="panel">
     <h3>${master ? esc(d.semester.label || '학기 미설정') + ' 저장된 시간표' : '내가 올린 시간표'} <small class="muted" style="font-weight:400">${mine.length}명 · 이름순</small></h3>
     ${mine.length ? `<div class="tablewrap"><table class="list">
-      <thead><tr><th>교수</th><th>보직</th>${master ? '<th>올린 곳</th>' : ''}<th>수업 시간 (불가)</th><th>확인 번호</th><th>반영일</th><th></th></tr></thead>
+      <thead><tr><th>교수</th><th>보직</th>${master ? '<th>쓰는 관리자</th>' : ''}<th>수업 시간 (불가)</th><th>확인 번호</th><th>반영일</th><th></th></tr></thead>
       <tbody>${mine.map(p => `<tr>
-        <td><b>${esc(p.name)}</b></td><td class="muted">${esc(p.role || '—')}</td>${master ? `<td class="muted">${esc(p.ownerName || '센터')}</td>` : ''}
+        <td><b>${esc(p.name)}</b></td><td class="muted">${esc(p.role || '—')}</td>${master ? (p.owner ? `<td class="muted">${esc(p.ownerName)}</td>` : '<td><span class="pill no">없음</span></td>') : ''}
         <td><div class="chips">${busySummary(p.busy).map(c => `<span class="chip">${c}</span>`).join('') || '<span class="muted">수업 없음</span>'}</div></td>
         <td class="mono muted">••••</td><td class="mono muted">${esc(p.updated)}</td>
         <td><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">${TT.pendingDel === p.id
@@ -517,6 +521,7 @@ function extractHTML(e) {
     <form class="keep" id="ex-form">
       <div class="yes"><b>저장하는 것</b><ul><li>교수 이름, 보직</li><li>확인 번호 (암호화해서 저장)</li><li>수업이 있는 교시</li></ul></div>
       <div class="no"><b>저장하지 않는 것</b><ul><li>과목명, 과목코드, 분반, 강의실</li><li>원본 파일</li></ul></div>
+      ${CTX.mode === 'master' ? ownerSelectHTML(e.owner || TT.owner) : ''}
       <label class="field"><span>이름</span><input type="text" id="ex-name" value="${esc(e.name)}" required></label>
       <label class="field"><span>보직 (선택)</span><input type="text" id="ex-role" value="${esc(e.role)}" placeholder="예: 교무처장"></label>
       <label class="field"><span>확인 번호 <small class="muted" style="font-weight:400">내선번호 뒷자리 4자리${e.id ? ' · 바꿀 때만 입력' : ''}</small></span><input type="text" id="ex-pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${e.id ? '••••' : '예: 2345'}"></label>
@@ -524,18 +529,24 @@ function extractHTML(e) {
     </form>
   </div>`;
 }
+function ownerSelectHTML(cur) {
+  const admins = byName(M.data.admins);
+  return `<label class="field"><span>쓸 관리자 <small class="muted" style="font-weight:400">이 관리자의 회의에서만 보여요</small></span>
+    <select id="ex-owner" required><option value="">${admins.length ? '골라주세요' : '관리자 주소 탭에서 먼저 만드세요'}</option>${admins.map(a => `<option value="${a.id}" ${a.id === cur ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`;
+}
 async function readFiles(files, replaceId) {
   TT.reading = true; ttRender();
-  const mine = ttData().profs.filter(p => p.mine);
+  // 담당자는 마지막에 고른 관리자의 시간표 중에서만 같은 이름을 찾아 덮어쓴다
+  const mine = ttData().profs.filter(p => p.mine && (CTX.mode !== 'master' || (TT.owner && p.owner === TT.owner)));
   for (const f of files) {
     try {
       const r = await readTimetable(f);
       if (replaceId) {
-        const p = mine.find(x => x.id === replaceId);
-        TT.queue.push({ id: p.id, replaceId, file: f.name, name: p.name, role: p.role, busy: r.busy });
+        const p = ttData().profs.find(x => x.id === replaceId);
+        TT.queue.push({ id: p.id, replaceId, file: f.name, name: p.name, role: p.role, owner: p.owner, busy: r.busy });
       } else {
         const same = mine.find(x => r.name && x.name.replace(/\s/g, '') === r.name.replace(/\s/g, ''));
-        TT.queue.push(same ? { id: same.id, replaceId: same.id, file: f.name, name: same.name, role: same.role, busy: r.busy }
+        TT.queue.push(same ? { id: same.id, replaceId: same.id, file: f.name, name: same.name, role: same.role, owner: same.owner, busy: r.busy }
           : { file: f.name, name: r.name, role: '', busy: r.busy });
       }
     } catch (e) {
@@ -557,7 +568,7 @@ function bindTimetable() {
     const b = e.target.closest('[data-act]'); if (!b) return;
     const a = b.dataset.act, id = b.dataset.id, d = ttData();
     if (a === 'ex-skip') { TT.queue.shift(); return ttRender(); }
-    if (a === 'edit') { const p = d.profs.find(x => x.id === id); TT.queue.unshift({ id, editOnly: true, name: p.name, role: p.role, busy: JSON.parse(JSON.stringify(p.busy)) }); ttRender(); return window.scrollTo(0, 0); }
+    if (a === 'edit') { const p = d.profs.find(x => x.id === id); TT.queue.unshift({ id, editOnly: true, name: p.name, role: p.role, owner: p.owner, busy: JSON.parse(JSON.stringify(p.busy)) }); ttRender(); return window.scrollTo(0, 0); }
     if (a === 'del') { TT.pendingDel = id; return ttRender(); }
     if (a === 'del-no') { TT.pendingDel = null; return ttRender(); }
     if (a === 'del-yes') return busyRun(b, async () => {
@@ -583,9 +594,10 @@ function bindTimetable() {
     e.preventDefault();
     busyRun(e.target.querySelector('[type=submit]'), async () => {
       const ex = TT.queue[0], d = ttData();
-      const p = await call('prof.save', { id: ex.id || '', name: $('#ex-name').value, role: $('#ex-role').value, pin: $('#ex-pin').value.trim(), busy: ex.busy });
+      const owner = CTX.mode === 'master' ? $('#ex-owner').value : '';
+      const p = await call('prof.save', { id: ex.id || '', name: $('#ex-name').value, role: $('#ex-role').value, pin: $('#ex-pin').value.trim(), busy: ex.busy, owner });
       const i = d.profs.findIndex(x => x.id === p.id);
-      if (i >= 0) p.ownerName = d.profs[i].ownerName;
+      if (owner) { TT.owner = p.owner = owner; p.ownerName = M.data.admins.find(a => a.id === owner).name; }
       i >= 0 ? d.profs.splice(i, 1, p) : d.profs.push(p);
       TT.queue.shift(); toast(`${p.name} 교수 시간표를 저장했어요.`); ttRender();
     });
@@ -644,8 +656,18 @@ function bindMaster() {
       M.data.semester = await call('master.saveSemester', { label: $('#sem-label').value, purge: $('#sem-purge').value });
       toast('학기 설정을 저장했어요.'); renderMaster();
     }); }
+    if (e.target.id === 'orphan-form') { e.preventDefault(); return busyRun(btn, async () => {
+      const owner = $('#orphan-owner').value, r = await call('master.assignOrphans', { owner });
+      TT.owner = owner; M.data = await call('master.load');
+      toast(`${r.moved}명을 넘겼어요.${r.skipped ? ` 같은 이름이 이미 있는 ${r.skipped}명은 그대로 두었어요.` : ''}`); renderMaster();
+    }); }
+    if (e.target.classList.contains('org-form')) { e.preventDefault(); return busyRun(btn, async () => {
+      const ad = M.data.admins.find(x => x.id === e.target.dataset.id);
+      ad.org = await call('master.setAdminOrg', { id: ad.id, org: e.target.querySelector('.org-in').value });
+      toast(`${ad.name} 응답 화면 이름을 '${ad.org}'(으)로 바꿨어요.`); renderMaster();
+    }); }
     if (e.target.id === 'adm-form') { e.preventDefault(); return busyRun(btn, async () => {
-      const a = await call('master.addAdmin', { name: $('#adm-name').value });
+      const a = await call('master.addAdmin', { name: $('#adm-name').value, org: $('#adm-org').value });
       M.data.admins.push(a); M.newAdmin = a.id; toast(`${a.name} 관리자 주소를 만들었어요.`); renderMaster();
     }); }
   });
@@ -656,13 +678,15 @@ function masterAdminsHTML(d) {
   <div class="note"><b>관리자 주소</b><span>관리자마다 주소를 하나씩 만들어 전달하세요. 관리자는 이 주소를 즐겨찾기해 두고 회의를 만들어요. 담당자 본인도 회의를 만들려면 자기 이름으로 하나 만드세요.</span></div>
   <form class="panel form" id="adm-form">
     <label class="field"><span>관리자 이름</span><input type="text" id="adm-name" placeholder="예: 교무팀 김OO" required></label>
-    <div class="field" style="justify-content:flex-end"><button class="btn primary" type="submit">주소 만들기</button></div>
+    <label class="field"><span>응답 화면 이름 <small class="muted" style="font-weight:400">응답 링크에서 시간표가 있는 교수가 고르는 이름</small></span><input type="text" id="adm-org" maxlength="30" placeholder="교수학습혁신센터"></label>
+    <div class="field full" style="align-items:flex-start"><button class="btn primary" type="submit">주소 만들기</button></div>
   </form>
   <div class="panel">
     <h3>관리자 <small class="muted" style="font-weight:400">${d.admins.length}명</small></h3>
     ${d.admins.length ? `<div class="links">${d.admins.map(a => `
       <div class="link">
         <span class="lbl">${esc(a.name)} <small class="muted mono" style="font-weight:400">${esc(a.created)}</small>${M.newAdmin === a.id ? ' <span class="pill ok">새로 만듦</span>' : ''}</span>
+        <form class="row org-form" data-id="${a.id}" style="grid-column:1/-1;flex-wrap:nowrap;gap:6px"><small class="muted" style="white-space:nowrap">응답 화면</small><input type="text" class="org-in" maxlength="30" value="${esc(a.org)}" aria-label="응답 화면 이름" style="padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--cell);min-width:0;flex:1"><button class="btn sm" type="submit">저장</button></form>
         <code>${esc(url(a.key))}</code>
         <div class="row" style="flex-wrap:nowrap">${M.pendingAdminDel === a.id
           ? `<button class="btn sm danger" data-act="adm-del-yes" data-id="${a.id}">막기</button><button class="btn sm" data-act="adm-del-no">취소</button>`
@@ -693,7 +717,7 @@ function renderAdmin() {
   <section class="view">${A.tab === 'create' ? createHTML(d) : A.tab === 'list' ? listHTML(d) : timetableHTML(d)}</section>`;
 }
 function inviteText(m) {
-  return `[${m.title}] 회의 가능 시간을 여쭙니다.\n기간: ${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])}, ${hm(m.start)}–${hm(m.end)}\n아래 링크에서 가능한 시간을 칠해주세요. 교수학습혁신센터 구성원은 '교수학습혁신센터'를 고르고 이름과 내선번호 뒷자리 4자리를 넣으시면 수업 시간이 미리 표시됩니다.\n화면이 열리지 않으면 시크릿 창(Ctrl+Shift+N)에서 열어주세요.\n${m.respUrl}`;
+  return `[${m.title}] 회의 가능 시간을 여쭙니다.\n기간: ${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])}, ${hm(m.start)}–${hm(m.end)}\n아래 링크에서 가능한 시간을 칠해주세요. ${A.data.me.org} 구성원은 '${A.data.me.org}' 버튼을 누르고 이름과 내선번호 뒷자리 4자리를 넣으시면 수업 시간이 미리 표시됩니다.\n화면이 열리지 않으면 시크릿 창(Ctrl+Shift+N)에서 열어주세요.\n${m.respUrl}`;
 }
 function createHTML(d) {
   const hours = []; for (let h = 7; h <= 22; h++) hours.push(h);
@@ -714,8 +738,8 @@ function createHTML(d) {
         <label class="chk"><input type="radio" name="c-unit" value="30" checked>30분</label>
         <label class="chk"><input type="radio" name="c-unit" value="60">1시간</label></div></div>
       <div class="field full"><span>참석 교수 <small class="muted" style="font-weight:400">· ${esc(d.semester.label || '이번 학기')} 시간표가 자동으로 깔려요</small></span>
-        ${d.profs.length ? `<div class="checks">${byName(d.profs).map(p => `<label class="chk"><input type="checkbox" name="c-prof" value="${p.id}">${esc(p.name)} <small>${esc(p.role || '')}${p.mine ? ' · 내가 올림' : ''}</small></label>`).join('')}</div>`
-          : '<p class="muted" style="font-size:.86rem">아직 등록된 교수 시간표가 없어요. 위의 시간표 올리기 탭에서 직접 올리거나 담당자에게 요청하세요.</p>'}</div>
+        ${d.profs.length ? `<div class="checks">${byName(d.profs).map(p => `<label class="chk"><input type="checkbox" name="c-prof" value="${p.id}">${esc(p.name)} <small>${esc(p.role || '')}</small></label>`).join('')}</div>`
+          : '<p class="muted" style="font-size:.86rem">아직 등록된 교수 시간표가 없어요. 위의 시간표 올리기 탭에서 직접 올리거나, 담당자에게 이 관리자 앞으로 올려 달라고 요청하세요.</p>'}</div>
       <p class="full muted" style="font-size:.84rem">외부 참석자는 따로 등록하지 않아요. 응답 링크에서 이름을 직접 입력합니다.</p>
       <div class="full"><button class="btn primary" type="submit">회의 만들고 링크 받기</button></div>
     </form>
@@ -723,7 +747,7 @@ function createHTML(d) {
       ${c ? `<div class="panel" id="created">
         <h3>링크가 만들어졌어요</h3>
         <div class="links">
-          <div class="link"><span class="lbl">응답 링크 · 센터 구성원과 외부 참석자 모두에게 같은 링크를 보내세요</span><code>${esc(c.respUrl)}</code><button class="btn sm" type="button" data-copy>복사</button></div>
+          <div class="link"><span class="lbl">응답 링크 · ${esc(d.me.org)} 구성원과 외부 참석자 모두에게 같은 링크를 보내세요</span><code>${esc(c.respUrl)}</code><button class="btn sm" type="button" data-copy>복사</button></div>
           <div class="link"><span class="lbl">관리 링크 · 결과 보기용, 함께 볼 관리자에게만</span><code>${esc(c.adminUrl)}</code><button class="btn sm" type="button" data-copy>복사</button></div>
           <div class="link"><span class="lbl">안내 문구</span><textarea class="msg" readonly>${esc(inviteText(c))}</textarea><button class="btn sm" type="button" data-copy>복사</button></div>
         </div>
@@ -905,10 +929,10 @@ function syncList() {
 }
 
 /* ================= 참석자 ================= */
-const P = { meeting: null, persona: null, prof: null, ext: null, draft: new Set(), done: false, err: '', locked: false };
+const P = { meeting: null, org: '', persona: null, prof: null, ext: null, draft: new Set(), done: false, err: '', locked: false };
 async function bootRespond() {
   const d = await call('resp.load', { edit: CTX.edit });
-  P.meeting = d.meeting;
+  P.meeting = d.meeting; P.org = d.org;
   if (d.ext) { P.persona = 'ext'; P.ext = { name: d.ext.name, org: d.ext.org, edit: CTX.edit }; P.draft = new Set(d.ext.avail); }
   renderRespond();
 }
@@ -927,7 +951,7 @@ function renderRespond() {
   if (!P.persona) return wrap(`
     <p>어떤 분으로 응답하시나요?</p>
     <div class="pick">
-      <button class="panel" data-p="as-prof"><b>교수학습혁신센터</b><span class="muted">이름과 확인 번호(내선번호 뒷자리 4자리)를 넣으면 수업 시간이 미리 표시돼요.</span></button>
+      <button class="panel" data-p="as-prof"><b>${esc(P.org)}</b><span class="muted">이름과 확인 번호(내선번호 뒷자리 4자리)를 넣으면 수업 시간이 미리 표시돼요.</span></button>
       <button class="panel" data-p="as-ext"><b>외부 참석자</b><span class="muted">이름만 입력하고 바로 시작해요.</span></button>
     </div>${fine}`);
   if (P.persona === 'prof' && !pr) return wrap(`
