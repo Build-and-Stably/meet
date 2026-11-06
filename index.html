@@ -633,7 +633,20 @@ function masterProfsHTML(d) {
       <div class="full"><button class="btn" type="submit">저장</button></div>
     </form>
   </div>
-  ${timetableHTML(d)}`;
+  ${timetableHTML(d)}
+  ${d.admins.length > 1 && d.profs.some(p => p.owner) ? copyHTML(d) : ''}`;
+}
+function copyHTML(d) {
+  const sel = id => `<select id="${id}" required><option value="">골라주세요</option>${byName(d.admins).map(a => `<option value="${a.id}">${esc(a.name)} (${d.profs.filter(p => p.owner === a.id).length}명)</option>`).join('')}</select>`;
+  return `<div class="panel">
+    <h3>다른 관리자에게 복사</h3>
+    <p class="muted" style="font-size:.84rem;margin-bottom:10px">한 관리자의 시간표를 확인 번호까지 그대로 다른 관리자에게 복사해요. 받는 쪽에 같은 이름이 있으면 건너뛰어요. 복사한 뒤에는 따로 관리돼서, 한쪽을 고쳐도 다른 쪽은 바뀌지 않아요.</p>
+    <form class="form" id="copy-form">
+      <label class="field"><span>보내는 관리자</span>${sel('copy-from')}</label>
+      <label class="field"><span>받는 관리자</span>${sel('copy-to')}</label>
+      <div class="full"><button class="btn primary" type="submit">복사</button></div>
+    </form>
+  </div>`;
 }
 function bindMaster() {
   bindTimetable();
@@ -665,6 +678,13 @@ function bindMaster() {
       const ad = M.data.admins.find(x => x.id === e.target.dataset.id);
       ad.org = await call('master.setAdminOrg', { id: ad.id, org: e.target.querySelector('.org-in').value });
       toast(`${ad.name} 응답 화면 이름을 '${ad.org}'(으)로 바꿨어요.`); renderMaster();
+    }); }
+    if (e.target.id === 'copy-form') { e.preventDefault(); return busyRun(btn, async () => {
+      const from = $('#copy-from').value, to = $('#copy-to').value;
+      const r = await call('master.copyProfs', { from, to });
+      M.data = await call('master.load');
+      const toName = M.data.admins.find(a => a.id === to).name;
+      toast(`${toName}에 ${r.copied}명을 복사했어요.${r.skipped ? ` 같은 이름이 이미 있는 ${r.skipped}명은 건너뛰었어요.` : ''}`); renderMaster();
     }); }
     if (e.target.id === 'adm-form') { e.preventDefault(); return busyRun(btn, async () => {
       const a = await call('master.addAdmin', { name: $('#adm-name').value, org: $('#adm-org').value });
