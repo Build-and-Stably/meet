@@ -77,10 +77,12 @@ button,input,select{font:inherit;color:inherit}
 
 /* 주간 그리드 */
 .gridwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
-.grid{display:grid;min-width:420px;user-select:none;-webkit-user-select:none}
+.grid{display:grid;grid-template-columns:var(--tlw,54px) repeat(var(--n),minmax(var(--cw,64px),1fr));user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .grid .dh{position:sticky;top:0;background:var(--surface);padding:8px 4px;text-align:center;font-weight:600;font-size:.85rem;border-bottom:1px solid var(--line);z-index:1}
 .grid .dh small{display:block;font-weight:400;color:var(--muted);font-family:var(--f-mono);font-size:.72rem}
-.grid .tl{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);text-align:right;padding:0 8px 0 4px;transform:translateY(-.55em)}
+.grid .tl{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);text-align:right;padding:0 8px 0 4px;transform:translateY(-.55em);position:sticky;left:0;background:var(--surface);z-index:1}
+.grid .dh:first-child{left:0;z-index:2}
+.grid .tl.first{transform:none}
 .grid .tl.half{opacity:0}
 .cell{height:24px;border-left:1px solid var(--line);border-top:1px solid color-mix(in oklab,var(--line) 55%,transparent);background:var(--cell);position:relative;touch-action:none;font-size:.7rem;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .cell.hr{border-top-color:var(--line)}
@@ -96,7 +98,7 @@ button,input,select{font:inherit;color:inherit}
 .legend .l-all{background:var(--heat);box-shadow:inset 0 0 0 2px var(--accent-ink),0 0 0 1px var(--heat)}
 
 /* 결과 히트맵 */
-.heat .cell{background:color-mix(in oklab,var(--heat) var(--p),var(--cell));color:var(--muted);font-family:var(--f-mono)}
+.heat .cell{touch-action:manipulation;background:color-mix(in oklab,var(--heat) var(--p),var(--cell));color:var(--muted);font-family:var(--f-mono)}
 .heat .cell.dark{color:var(--accent-ink)}
 .heat .cell.all::after{content:"";position:absolute;inset:2px;border:2px solid var(--accent-ink);border-radius:3px;opacity:.85}
 .heat .cell.sel{outline:2px solid var(--sel);outline-offset:-2px;z-index:1}
@@ -121,6 +123,12 @@ button,input,select{font:inherit;color:inherit}
 .detail dl{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:8px 0 12px;font-size:.86rem}
 .detail dt{color:var(--muted)}
 .detail dd{margin:0}
+.cdone{color:var(--accent);font-weight:600;font-size:.86rem}
+.mrow .acts{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}
+.scrollhint{display:none}
+.gridwrap.scrollx+.scrollhint{display:block}
+.selbar{display:none}
+.selbar .btn{white-space:nowrap;flex-shrink:0}
 .confirmed{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent-soft)}
 
 /* 폼 */
@@ -186,6 +194,35 @@ table.list tr:last-child td{border-bottom:0}
 .sum{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
 
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:8px;font-weight:500;z-index:20}
+/* 모바일: 표는 화면 폭에 맞추고, 손가락으로 누르기 쉽게, iOS 입력 확대 방지 */
+@media (max-width:900px){
+  .selbar{display:flex;position:sticky;bottom:env(safe-area-inset-bottom,0px);justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--sel);border-radius:10px;box-shadow:0 -8px 20px -14px rgba(0,0,0,.45);z-index:2;font-size:.88rem}
+}
+@media (max-width:640px){
+  body{font-size:15px}
+  .wrap{padding-block:12px 40px}
+  input[type=text],input[type=password],input[type=date],select,textarea{font-size:16px!important}
+  .grid{--tlw:42px;--cw:40px}
+  .grid .tl{padding:0 5px 0 2px;font-size:.66rem}
+  .grid .dh{padding:6px 2px;font-size:.8rem}
+  .panel{padding:14px 12px}
+  .phead h2{font-size:1.25rem}
+  .mrow{flex-wrap:wrap}
+  .mrow .nm{flex-basis:100%}
+  .mrow .acts{width:100%}
+  .head .row{width:100%}
+  .savebar{padding:10px 12px}
+  .savebar .btn{flex-shrink:0}
+  .pbar select{max-width:100%}
+  .tablewrap table.list{min-width:620px}
+}
+@media (pointer:coarse){
+  .cell{height:30px}
+  .btn{min-height:42px}
+  .btn.sm{min-height:36px}
+  .chk{min-height:40px}
+  .seg button{min-height:36px}
+}
 @media (prefers-reduced-motion:no-preference){.step,.btn,.best button{transition:border-color .15s}}
 </style>
   <style>
@@ -243,6 +280,11 @@ const dLabel = s => { const d = parseD(s); return `${d.getMonth() + 1}/${d.getDa
 const key = (d, t) => d + '|' + t;
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtRange = r => `${dLabel(r.date)} ${hm(r.from)}–${hm(r.to)}`;
+// 2026.11.13(금) 오전 10시 확정
+const confirmedLabel = c => {
+  const d = parseD(c.date), h = Math.floor(c.from / 60), mi = c.from % 60, p2 = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}.${p2(d.getMonth() + 1)}.${p2(d.getDate())}(${DOW[d.getDay()]}) ${h < 12 ? '오전' : '오후'} ${h % 12 || 12}시${mi ? ` ${mi}분` : ''} 확정`;
+};
 const app = $('#app');
 const link = q => CTX.share ? CTX.share + '#' + q : CTX.url + '?' + q;
 const byName = list => list.slice().sort((a, b) => a.name.localeCompare(b.name, 'ko'));
@@ -323,18 +365,22 @@ function ranges(m, set) {
   return out;
 }
 function gridHTML(m, id, cellAttrs, extraClass = '') {
-  let h = `<div class="gridwrap"><div class="grid ${extraClass}" id="${id}" style="grid-template-columns:54px repeat(${m.dates.length},minmax(64px,1fr))">`;
+  let h = `<div class="gridwrap"><div class="grid ${extraClass}" id="${id}" style="--n:${m.dates.length}">`;
   h += `<div class="dh"></div>` + m.dates.map(d => { const dt = parseD(d); return `<div class="dh">${DOW[dt.getDay()]}<small>${dt.getMonth() + 1}/${dt.getDate()}</small></div>`; }).join('');
   for (const t of slots(m)) {
     const hr = t % 60 === 0;
-    h += `<div class="tl ${hr ? '' : 'half'}">${hm(t)}</div>`;
+    h += `<div class="tl ${hr ? '' : 'half'} ${t === m.start ? 'first' : ''}">${hm(t)}</div>`;
     for (const d of m.dates) {
       const a = cellAttrs(d, t);
       h += `<div class="cell ${hr ? 'hr' : ''} ${a.cls || ''}" data-k="${key(d, t)}" ${a.style ? `style="${a.style}"` : ''} ${a.title ? `title="${esc(a.title)}"` : ''}>${a.text || ''}</div>`;
     }
   }
-  return h + `</div></div>`;
+  return h + `</div></div><p class="fine scrollhint">날짜가 더 있어요. 맨 위 날짜 줄을 옆으로 밀어 넘겨보세요.</p>`;
 }
+// 표가 화면보다 넓으면 옆으로 넘기라는 안내를 보인다
+function flagScroll() { $$('.gridwrap').forEach(w => w.classList.toggle('scrollx', w.scrollWidth > w.clientWidth + 1)); }
+window.addEventListener('resize', flagScroll);
+const narrow = () => matchMedia('(max-width:900px)').matches;
 const periodLabel = m => `<span class="mono">${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])}</span><span class="mono">${hm(m.start)}–${hm(m.end)}</span><span>${m.unit}분 단위</span>`;
 
 /* ================= 시간표 PDF·이미지 읽기 (브라우저 안에서만) ================= */
@@ -426,8 +472,128 @@ function detectBusyFromPixels(data, W, H) {
   return busy;
 }
 
+/* ================= 학기 시간표 올리기 (담당자·관리자 함께 씀) ================= */
+// 담당자는 모든 시간표를, 관리자는 자기가 올린 시간표만 고친다(profs 중 mine 인 것). 서버가 한 번 더 확인한다.
+const TT = { queue: [], pendingDel: null, reading: false };
+const ttOn = () => CTX.mode === 'master' || (CTX.mode === 'admin' && !A.result && A.tab === 'profs');
+const ttData = () => CTX.mode === 'master' ? M.data : A.data;
+const ttRender = () => CTX.mode === 'master' ? renderMaster() : renderAdmin();
+function timetableHTML(d) {
+  const ex = TT.queue[0], master = CTX.mode === 'master', mine = byName(d.profs.filter(p => p.mine));
+  return `
+  ${master ? '' : `<div class="note"><b>내 시간표</b><span>여기 올린 시간표는 ${esc(d.me.name)}님이 만드는 회의에서만 고를 수 있어요. 교수학습혁신센터가 올린 시간표는 다시 올리지 않아도 회의 만들기에 나와요.${d.semester.purge ? ` <span class="mono">${esc(d.semester.purge)}</span>이 지나면 자동으로 지워져요.` : ''}</span></div>`}
+  <div class="panel">
+    <h3>시간표 올리기</h3>
+    ${ex ? extractHTML(ex) : `
+    <div class="drop" id="drop">
+      <p>하이유에서 내려받은 강의시간표 PDF를 여기에 끌어다 놓으세요. 여러 개를 한꺼번에 올릴 수 있어요.</p>
+      <p class="muted" style="font-size:.82rem">파일은 이 브라우저 안에서만 읽고 서버로 보내지 않아요. 저장되는 건 이름, 보직, 확인 번호, 수업이 있는 교시뿐이에요.</p>
+      <span class="btn primary filebtn">${TT.reading ? '읽는 중…' : '파일 고르기'}<input type="file" id="files" accept="${ACCEPT}" multiple ${TT.reading ? 'disabled' : ''}></span>
+    </div>`}
+  </div>
+  <div class="panel">
+    <h3>${master ? esc(d.semester.label || '학기 미설정') + ' 저장된 시간표' : '내가 올린 시간표'} <small class="muted" style="font-weight:400">${mine.length}명 · 이름순</small></h3>
+    ${mine.length ? `<div class="tablewrap"><table class="list">
+      <thead><tr><th>교수</th><th>보직</th>${master ? '<th>올린 곳</th>' : ''}<th>수업 시간 (불가)</th><th>확인 번호</th><th>반영일</th><th></th></tr></thead>
+      <tbody>${mine.map(p => `<tr>
+        <td><b>${esc(p.name)}</b></td><td class="muted">${esc(p.role || '—')}</td>${master ? `<td class="muted">${esc(p.ownerName || '센터')}</td>` : ''}
+        <td><div class="chips">${busySummary(p.busy).map(c => `<span class="chip">${c}</span>`).join('') || '<span class="muted">수업 없음</span>'}</div></td>
+        <td class="mono muted">••••</td><td class="mono muted">${esc(p.updated)}</td>
+        <td><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">${TT.pendingDel === p.id
+          ? `<button class="btn sm danger" data-act="del-yes" data-id="${p.id}">삭제</button><button class="btn sm" data-act="del-no">취소</button>`
+          : `<button class="btn sm" data-act="edit" data-id="${p.id}">고치기</button><span class="btn sm filebtn">다시 올리기<input type="file" accept="${ACCEPT}" data-reup="${p.id}"></span><button class="btn sm" data-act="del" data-id="${p.id}">삭제</button>`}</div></td>
+      </tr>`).join('')}</tbody></table></div>` : '<p class="muted">아직 올린 시간표가 없어요.</p>'}
+  </div>`;
+}
+function extractHTML(e) {
+  const rows = PERIOD_NUMS.map(p => `<tr><th>${p}</th>${DAY_NAMES.map(d => `<td class="${(e.busy[d] || []).includes(p) ? 'b' : ''}" data-cell="${d}|${p}"></td>`).join('')}</tr>`).join('');
+  return `
+  <div class="extract">
+    <div>
+      <p style="margin-bottom:8px"><b>${e.replaceId || e.editOnly ? '시간표 고치기' : '읽은 결과'}</b> <span class="muted">· 회색 칸이 수업 시간. 칸을 누르면 고칠 수 있어요.</span></p>
+      ${e.file ? `<p class="queue" style="margin-bottom:6px">${esc(e.file)}${TT.queue.length > 1 ? ` · 남은 파일 ${TT.queue.length - 1}개` : ''}</p>` : ''}
+      <div style="overflow-x:auto"><table class="mini" id="mini"><thead><tr><th>교시</th>${DAY_NAMES.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+    </div>
+    <form class="keep" id="ex-form">
+      <div class="yes"><b>저장하는 것</b><ul><li>교수 이름, 보직</li><li>확인 번호 (암호화해서 저장)</li><li>수업이 있는 교시</li></ul></div>
+      <div class="no"><b>저장하지 않는 것</b><ul><li>과목명, 과목코드, 분반, 강의실</li><li>원본 파일</li></ul></div>
+      <label class="field"><span>이름</span><input type="text" id="ex-name" value="${esc(e.name)}" required></label>
+      <label class="field"><span>보직 (선택)</span><input type="text" id="ex-role" value="${esc(e.role)}" placeholder="예: 교무처장"></label>
+      <label class="field"><span>확인 번호 <small class="muted" style="font-weight:400">내선번호 뒷자리 4자리${e.id ? ' · 바꿀 때만 입력' : ''}</small></span><input type="text" id="ex-pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${e.id ? '••••' : '예: 2345'}"></label>
+      <div class="row"><button class="btn primary" type="submit">${e.id ? '저장' : '목록에 추가'}</button><button class="btn" type="button" data-act="ex-skip">${TT.queue.length > 1 ? '건너뛰기' : '취소'}</button></div>
+    </form>
+  </div>`;
+}
+async function readFiles(files, replaceId) {
+  TT.reading = true; ttRender();
+  const mine = ttData().profs.filter(p => p.mine);
+  for (const f of files) {
+    try {
+      const r = await readTimetable(f);
+      if (replaceId) {
+        const p = mine.find(x => x.id === replaceId);
+        TT.queue.push({ id: p.id, replaceId, file: f.name, name: p.name, role: p.role, busy: r.busy });
+      } else {
+        const same = mine.find(x => r.name && x.name.replace(/\s/g, '') === r.name.replace(/\s/g, ''));
+        TT.queue.push(same ? { id: same.id, replaceId: same.id, file: f.name, name: same.name, role: same.role, busy: r.busy }
+          : { file: f.name, name: r.name, role: '', busy: r.busy });
+      }
+    } catch (e) {
+      toast(`${f.name}: ${e.message}`);
+    }
+  }
+  TT.reading = false; ttRender();
+}
+function bindTimetable() {
+  app.addEventListener('click', e => {
+    if (!ttOn()) return;
+    const cell = e.target.closest('#mini [data-cell]');
+    if (cell) {
+      const [d, p] = cell.dataset.cell.split('|'), n = +p, ex = TT.queue[0];
+      const list = ex.busy[d] || (ex.busy[d] = []);
+      const i = list.indexOf(n); i >= 0 ? list.splice(i, 1) : list.push(n);
+      cell.classList.toggle('b', i < 0); return;
+    }
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const a = b.dataset.act, id = b.dataset.id, d = ttData();
+    if (a === 'ex-skip') { TT.queue.shift(); return ttRender(); }
+    if (a === 'edit') { const p = d.profs.find(x => x.id === id); TT.queue.unshift({ id, editOnly: true, name: p.name, role: p.role, busy: JSON.parse(JSON.stringify(p.busy)) }); ttRender(); return window.scrollTo(0, 0); }
+    if (a === 'del') { TT.pendingDel = id; return ttRender(); }
+    if (a === 'del-no') { TT.pendingDel = null; return ttRender(); }
+    if (a === 'del-yes') return busyRun(b, async () => {
+      await call('prof.delete', { id });
+      d.profs = d.profs.filter(x => x.id !== id); TT.pendingDel = null; toast('삭제했어요.'); ttRender();
+    });
+  });
+  app.addEventListener('change', e => {
+    if (!ttOn()) return;
+    if (e.target.id === 'files' && e.target.files.length) readFiles([...e.target.files]);
+    if (e.target.dataset.reup && e.target.files.length) { readFiles([e.target.files[0]], e.target.dataset.reup); window.scrollTo(0, 0); }
+  });
+  app.addEventListener('dragover', e => { const d = e.target.closest('#drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
+  app.addEventListener('dragleave', e => { const d = e.target.closest('#drop'); if (d) d.classList.remove('over'); });
+  app.addEventListener('drop', e => {
+    const d = e.target.closest('#drop'); if (!d) return;
+    e.preventDefault(); d.classList.remove('over');
+    const fs = [...e.dataTransfer.files].filter(f => /pdf|image/.test(f.type) || /\.pdf$/i.test(f.name));
+    if (fs.length) readFiles(fs);
+  });
+  app.addEventListener('submit', e => {
+    if (!ttOn() || e.target.id !== 'ex-form') return;
+    e.preventDefault();
+    busyRun(e.target.querySelector('[type=submit]'), async () => {
+      const ex = TT.queue[0], d = ttData();
+      const p = await call('prof.save', { id: ex.id || '', name: $('#ex-name').value, role: $('#ex-role').value, pin: $('#ex-pin').value.trim(), busy: ex.busy });
+      const i = d.profs.findIndex(x => x.id === p.id);
+      if (i >= 0) p.ownerName = d.profs[i].ownerName;
+      i >= 0 ? d.profs.splice(i, 1, p) : d.profs.push(p);
+      TT.queue.shift(); toast(`${p.name} 교수 시간표를 저장했어요.`); ttRender();
+    });
+  });
+}
+
 /* ================= 담당자 ================= */
-const M = { data: null, tab: 'profs', queue: [], pendingDel: null, pendingAdminDel: null, newAdmin: null, reading: false };
+const M = { data: null, tab: 'profs', pendingAdminDel: null, newAdmin: null };
 async function bootMaster() {
   M.data = await call('master.load');
   renderMaster();
@@ -444,7 +610,6 @@ function renderMaster() {
   <section class="view">${M.tab === 'profs' ? masterProfsHTML(d) : masterAdminsHTML(d)}</section>`;
 }
 function masterProfsHTML(d) {
-  const ex = M.queue[0];
   const unset = !d.semester.label || !d.semester.purge;
   return `
   ${unset ? `<div class="note warn"><b>학기 설정</b><span>학기 이름과 시간표 자동 삭제일을 먼저 저장하세요. 삭제일이 비어 있으면 학기가 끝나도 시간표가 지워지지 않아요.</span></div>` : ''}
@@ -452,131 +617,37 @@ function masterProfsHTML(d) {
     <h3>학기 설정</h3>
     <form class="form" id="sem-form">
       <label class="field"><span>학기 이름</span><input type="text" id="sem-label" value="${esc(d.semester.label)}" placeholder="예: 2026-2학기"></label>
-      <label class="field"><span>시간표 자동 삭제일 <small class="muted" style="font-weight:400">이날이 지나면 교수 시간표 전체 삭제</small></span><input type="date" id="sem-purge" value="${esc(d.semester.purge)}"></label>
+      <label class="field"><span>시간표 자동 삭제일 <small class="muted" style="font-weight:400">이날이 지나면 관리자가 올린 것까지 시간표 전체 삭제</small></span><input type="date" id="sem-purge" value="${esc(d.semester.purge)}"></label>
       <div class="full"><button class="btn" type="submit">저장</button></div>
     </form>
   </div>
-  <div class="panel">
-    <h3>시간표 올리기</h3>
-    ${ex ? extractHTML(ex) : `
-    <div class="drop" id="drop">
-      <p>하이유에서 내려받은 강의시간표 PDF를 여기에 끌어다 놓으세요. 여러 개를 한꺼번에 올릴 수 있어요.</p>
-      <p class="muted" style="font-size:.82rem">파일은 이 브라우저 안에서만 읽고 서버로 보내지 않아요. 저장되는 건 이름, 보직, 확인 번호, 수업이 있는 교시뿐이에요.</p>
-      <span class="btn primary filebtn">${M.reading ? '읽는 중…' : '파일 고르기'}<input type="file" id="files" accept="${ACCEPT}" multiple ${M.reading ? 'disabled' : ''}></span>
-    </div>`}
-  </div>
-  <div class="panel">
-    <h3>${esc(d.semester.label || '학기 미설정')} 저장된 시간표 <small class="muted" style="font-weight:400">${d.profs.length}명 · 이름순</small></h3>
-    ${d.profs.length ? `<div class="tablewrap"><table class="list">
-      <thead><tr><th>교수</th><th>보직</th><th>수업 시간 (불가)</th><th>확인 번호</th><th>반영일</th><th></th></tr></thead>
-      <tbody>${byName(d.profs).map(p => `<tr>
-        <td><b>${esc(p.name)}</b></td><td class="muted">${esc(p.role || '—')}</td>
-        <td><div class="chips">${busySummary(p.busy).map(c => `<span class="chip">${c}</span>`).join('') || '<span class="muted">수업 없음</span>'}</div></td>
-        <td class="mono muted">••••</td><td class="mono muted">${esc(p.updated)}</td>
-        <td><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">${M.pendingDel === p.id
-          ? `<button class="btn sm danger" data-act="del-yes" data-id="${p.id}">삭제</button><button class="btn sm" data-act="del-no">취소</button>`
-          : `<button class="btn sm" data-act="edit" data-id="${p.id}">고치기</button><span class="btn sm filebtn">다시 올리기<input type="file" accept="${ACCEPT}" data-reup="${p.id}"></span><button class="btn sm" data-act="del" data-id="${p.id}">삭제</button>`}</div></td>
-      </tr>`).join('')}</tbody></table></div>` : '<p class="muted">아직 올린 시간표가 없어요.</p>'}
-  </div>`;
-}
-function extractHTML(e) {
-  const rows = PERIOD_NUMS.map(p => `<tr><th>${p}</th>${DAY_NAMES.map(d => `<td class="${(e.busy[d] || []).includes(p) ? 'b' : ''}" data-cell="${d}|${p}"></td>`).join('')}</tr>`).join('');
-  return `
-  <div class="extract">
-    <div>
-      <p style="margin-bottom:8px"><b>${e.replaceId || e.editOnly ? '시간표 고치기' : '읽은 결과'}</b> <span class="muted">· 회색 칸이 수업 시간. 칸을 누르면 고칠 수 있어요.</span></p>
-      ${e.file ? `<p class="queue" style="margin-bottom:6px">${esc(e.file)}${M.queue.length > 1 ? ` · 남은 파일 ${M.queue.length - 1}개` : ''}</p>` : ''}
-      <div style="overflow-x:auto"><table class="mini" id="mini"><thead><tr><th>교시</th>${DAY_NAMES.map(d => `<th>${d}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
-    </div>
-    <form class="keep" id="ex-form">
-      <div class="yes"><b>저장하는 것</b><ul><li>교수 이름, 보직</li><li>확인 번호 (암호화해서 저장)</li><li>수업이 있는 교시</li></ul></div>
-      <div class="no"><b>저장하지 않는 것</b><ul><li>과목명, 과목코드, 분반, 강의실</li><li>원본 파일</li></ul></div>
-      <label class="field"><span>이름</span><input type="text" id="ex-name" value="${esc(e.name)}" required></label>
-      <label class="field"><span>보직 (선택)</span><input type="text" id="ex-role" value="${esc(e.role)}" placeholder="예: 교무처장"></label>
-      <label class="field"><span>확인 번호 <small class="muted" style="font-weight:400">내선번호 뒷자리 4자리${e.id ? ' · 바꿀 때만 입력' : ''}</small></span><input type="text" id="ex-pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="${e.id ? '••••' : '예: 2345'}"></label>
-      <div class="row"><button class="btn primary" type="submit">${e.id ? '저장' : '목록에 추가'}</button><button class="btn" type="button" data-act="ex-skip">${M.queue.length > 1 ? '건너뛰기' : '취소'}</button></div>
-    </form>
-  </div>`;
-}
-async function readFiles(files, replaceId) {
-  M.reading = true; renderMaster();
-  for (const f of files) {
-    try {
-      const r = await readTimetable(f);
-      if (replaceId) {
-        const p = M.data.profs.find(x => x.id === replaceId);
-        M.queue.push({ id: p.id, replaceId, file: f.name, name: p.name, role: p.role, busy: r.busy });
-      } else {
-        const same = M.data.profs.find(x => r.name && x.name.replace(/\s/g, '') === r.name.replace(/\s/g, ''));
-        M.queue.push(same ? { id: same.id, replaceId: same.id, file: f.name, name: same.name, role: same.role, busy: r.busy }
-          : { file: f.name, name: r.name, role: '', busy: r.busy });
-      }
-    } catch (e) {
-      toast(`${f.name}: ${e.message}`);
-    }
-  }
-  M.reading = false; renderMaster();
+  ${timetableHTML(d)}`;
 }
 function bindMaster() {
+  bindTimetable();
   app.addEventListener('click', async e => {
     if (CTX.mode !== 'master') return;
     const t = e.target.closest('[data-tab]'); if (t) { M.tab = t.dataset.tab; return renderMaster(); }
-    const cell = e.target.closest('#mini [data-cell]');
-    if (cell) {
-      const [d, p] = cell.dataset.cell.split('|'), n = +p, ex = M.queue[0];
-      const list = ex.busy[d] || (ex.busy[d] = []);
-      const i = list.indexOf(n); i >= 0 ? list.splice(i, 1) : list.push(n);
-      cell.classList.toggle('b', i < 0); return;
-    }
     const b = e.target.closest('[data-act]'); if (!b) return;
     const a = b.dataset.act, id = b.dataset.id;
-    if (a === 'ex-skip') { M.queue.shift(); return renderMaster(); }
-    if (a === 'edit') { const p = M.data.profs.find(x => x.id === id); M.queue.unshift({ id, editOnly: true, name: p.name, role: p.role, busy: JSON.parse(JSON.stringify(p.busy)) }); renderMaster(); return window.scrollTo(0, 0); }
-    if (a === 'del') { M.pendingDel = id; return renderMaster(); }
-    if (a === 'del-no') { M.pendingDel = null; return renderMaster(); }
-    if (a === 'del-yes') return busyRun(b, async () => {
-      await call('master.deleteProf', { id });
-      M.data.profs = M.data.profs.filter(x => x.id !== id); M.pendingDel = null; toast('삭제했어요.'); renderMaster();
-    });
     if (a === 'adm-del') { M.pendingAdminDel = id; return renderMaster(); }
     if (a === 'adm-del-no') { M.pendingAdminDel = null; return renderMaster(); }
     if (a === 'adm-del-yes') return busyRun(b, async () => {
       await call('master.removeAdmin', { id });
-      M.data.admins = M.data.admins.filter(x => x.id !== id); M.pendingAdminDel = null; toast('관리자 주소를 막았어요.'); renderMaster();
+      M.data = await call('master.load'); M.pendingAdminDel = null; toast('관리자 주소를 막고 그 관리자가 올린 시간표를 지웠어요.'); renderMaster();
     });
-  });
-  app.addEventListener('change', e => {
-    if (CTX.mode !== 'master') return;
-    if (e.target.id === 'files' && e.target.files.length) readFiles([...e.target.files]);
-    if (e.target.dataset.reup && e.target.files.length) { readFiles([e.target.files[0]], e.target.dataset.reup); window.scrollTo(0, 0); }
-  });
-  app.addEventListener('dragover', e => { const d = e.target.closest('#drop'); if (d) { e.preventDefault(); d.classList.add('over'); } });
-  app.addEventListener('dragleave', e => { const d = e.target.closest('#drop'); if (d) d.classList.remove('over'); });
-  app.addEventListener('drop', e => {
-    const d = e.target.closest('#drop'); if (!d) return;
-    e.preventDefault(); d.classList.remove('over');
-    const fs = [...e.dataTransfer.files].filter(f => /pdf|image/.test(f.type) || /\.pdf$/i.test(f.name));
-    if (fs.length) readFiles(fs);
   });
   app.addEventListener('submit', e => {
     if (CTX.mode !== 'master') return;
-    e.preventDefault();
     const btn = e.target.querySelector('[type=submit]');
-    if (e.target.id === 'sem-form') return busyRun(btn, async () => {
+    if (e.target.id === 'sem-form') { e.preventDefault(); return busyRun(btn, async () => {
       M.data.semester = await call('master.saveSemester', { label: $('#sem-label').value, purge: $('#sem-purge').value });
       toast('학기 설정을 저장했어요.'); renderMaster();
-    });
-    if (e.target.id === 'ex-form') return busyRun(btn, async () => {
-      const ex = M.queue[0];
-      const p = await call('master.saveProf', { id: ex.id || '', name: $('#ex-name').value, role: $('#ex-role').value, pin: $('#ex-pin').value.trim(), busy: ex.busy });
-      const i = M.data.profs.findIndex(x => x.id === p.id);
-      i >= 0 ? M.data.profs.splice(i, 1, p) : M.data.profs.push(p);
-      M.queue.shift(); toast(`${p.name} 교수 시간표를 저장했어요.`); renderMaster();
-    });
-    if (e.target.id === 'adm-form') return busyRun(btn, async () => {
+    }); }
+    if (e.target.id === 'adm-form') { e.preventDefault(); return busyRun(btn, async () => {
       const a = await call('master.addAdmin', { name: $('#adm-name').value });
       M.data.admins.push(a); M.newAdmin = a.id; toast(`${a.name} 관리자 주소를 만들었어요.`); renderMaster();
-    });
+    }); }
   });
 }
 function masterAdminsHTML(d) {
@@ -617,11 +688,12 @@ function renderAdmin() {
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="create" aria-selected="${A.tab === 'create'}">회의 만들기</button>
     <button role="tab" data-tab="list" aria-selected="${A.tab === 'list'}">내 회의 <span class="muted">${d.meetings.length}</span></button>
+    <button role="tab" data-tab="profs" aria-selected="${A.tab === 'profs'}">시간표 올리기</button>
   </nav>
-  <section class="view">${A.tab === 'create' ? createHTML(d) : listHTML(d)}</section>`;
+  <section class="view">${A.tab === 'create' ? createHTML(d) : A.tab === 'list' ? listHTML(d) : timetableHTML(d)}</section>`;
 }
 function inviteText(m) {
-  return `[${m.title}] 회의 가능 시간을 여쭙니다.\n기간: ${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])}, ${hm(m.start)}–${hm(m.end)}\n아래 링크에서 가능한 시간을 칠해주세요. 교수님은 이름과 내선번호 뒷자리 4자리를 넣으시면 수업 시간이 미리 표시됩니다.\n화면이 열리지 않으면 시크릿 창(Ctrl+Shift+N)에서 열어주세요.\n${m.respUrl}`;
+  return `[${m.title}] 회의 가능 시간을 여쭙니다.\n기간: ${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])}, ${hm(m.start)}–${hm(m.end)}\n아래 링크에서 가능한 시간을 칠해주세요. 교수학습혁신센터 구성원은 '교수학습혁신센터'를 고르고 이름과 내선번호 뒷자리 4자리를 넣으시면 수업 시간이 미리 표시됩니다.\n화면이 열리지 않으면 시크릿 창(Ctrl+Shift+N)에서 열어주세요.\n${m.respUrl}`;
 }
 function createHTML(d) {
   const hours = []; for (let h = 7; h <= 22; h++) hours.push(h);
@@ -642,16 +714,16 @@ function createHTML(d) {
         <label class="chk"><input type="radio" name="c-unit" value="30" checked>30분</label>
         <label class="chk"><input type="radio" name="c-unit" value="60">1시간</label></div></div>
       <div class="field full"><span>참석 교수 <small class="muted" style="font-weight:400">· ${esc(d.semester.label || '이번 학기')} 시간표가 자동으로 깔려요</small></span>
-        ${d.profs.length ? `<div class="checks">${byName(d.profs).map(p => `<label class="chk"><input type="checkbox" name="c-prof" value="${p.id}">${esc(p.name)} <small>${esc(p.role || '')}</small></label>`).join('')}</div>`
-          : '<p class="muted" style="font-size:.86rem">아직 등록된 교수 시간표가 없어요. 담당자에게 요청하세요.</p>'}</div>
+        ${d.profs.length ? `<div class="checks">${byName(d.profs).map(p => `<label class="chk"><input type="checkbox" name="c-prof" value="${p.id}">${esc(p.name)} <small>${esc(p.role || '')}${p.mine ? ' · 내가 올림' : ''}</small></label>`).join('')}</div>`
+          : '<p class="muted" style="font-size:.86rem">아직 등록된 교수 시간표가 없어요. 위의 시간표 올리기 탭에서 직접 올리거나 담당자에게 요청하세요.</p>'}</div>
       <p class="full muted" style="font-size:.84rem">외부 참석자는 따로 등록하지 않아요. 응답 링크에서 이름을 직접 입력합니다.</p>
       <div class="full"><button class="btn primary" type="submit">회의 만들고 링크 받기</button></div>
     </form>
     <div class="view">
-      ${c ? `<div class="panel">
+      ${c ? `<div class="panel" id="created">
         <h3>링크가 만들어졌어요</h3>
         <div class="links">
-          <div class="link"><span class="lbl">응답 링크 · 교수님과 외부 참석자 모두에게 같은 링크를 보내세요</span><code>${esc(c.respUrl)}</code><button class="btn sm" type="button" data-copy>복사</button></div>
+          <div class="link"><span class="lbl">응답 링크 · 센터 구성원과 외부 참석자 모두에게 같은 링크를 보내세요</span><code>${esc(c.respUrl)}</code><button class="btn sm" type="button" data-copy>복사</button></div>
           <div class="link"><span class="lbl">관리 링크 · 결과 보기용, 함께 볼 관리자에게만</span><code>${esc(c.adminUrl)}</code><button class="btn sm" type="button" data-copy>복사</button></div>
           <div class="link"><span class="lbl">안내 문구</span><textarea class="msg" readonly>${esc(inviteText(c))}</textarea><button class="btn sm" type="button" data-copy>복사</button></div>
         </div>
@@ -662,10 +734,11 @@ function createHTML(d) {
 function listHTML(d) {
   if (!d.meetings.length) return '<div class="panel muted">아직 만든 회의가 없어요.</div>';
   return `<div class="panel"><div class="people">${d.meetings.map(m => {
-    const st = m.confirmed ? `<span class="pill idle">확정 · ${esc(m.purge)} 삭제</span>` : `<span class="pill ok">응답 ${m.answered}/${m.people}</span>`;
-    return `<div class="person"><div class="nm"><b>${esc(m.title)}</b><small class="mono">${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])} · 자동 삭제 ${esc(m.purge)}</small></div>${st}
-      ${A.pendingDel === m.id ? `<button class="btn sm danger" data-act="m-del-yes" data-id="${m.id}">삭제</button><button class="btn sm" data-act="m-del-no">취소</button>`
-        : `<button class="btn sm" data-act="m-del" data-id="${m.id}">삭제</button><button class="btn sm" data-open="${m.id}">결과</button>`}</div>`;
+    const acts = m.confirmed ? `<b class="cdone">${confirmedLabel(m.confirmed)}</b><button class="btn sm" data-open="${m.id}">결과</button>`
+      : `<span class="pill ok">응답 ${m.answered}/${m.people}</span>` + (A.pendingDel === m.id
+        ? `<button class="btn sm danger" data-act="m-del-yes" data-id="${m.id}">삭제</button><button class="btn sm" data-act="m-del-no">취소</button>`
+        : `<button class="btn sm" data-act="m-del" data-id="${m.id}">삭제</button><button class="btn sm" data-open="${m.id}">결과</button>`);
+    return `<div class="person mrow"><div class="nm"><b>${esc(m.title)}</b><small class="mono">${dLabel(m.dates[0])} – ${dLabel(m.dates[m.dates.length - 1])} · 자동 삭제 ${esc(m.purge)}</small></div><div class="acts">${acts}</div></div>`;
   }).join('')}</div>
   <p class="muted" style="font-size:.78rem;margin-top:8px">다른 관리자가 만든 회의는 여기에 보이지 않아요. 확정하지 않은 회의는 마지막 날짜 7일 뒤 자동 삭제돼요.</p></div>`;
 }
@@ -673,6 +746,7 @@ function bindAdmin() {
   app.addEventListener('click', async e => {
     if (CTX.mode !== 'admin' || A.result) return;
     const t = e.target.closest('[data-tab]'); if (t) { A.tab = t.dataset.tab; return renderAdmin(); }
+    if (A.tab === 'profs') return;
     const o = e.target.closest('[data-open]');
     if (o) return busyRun(o, async () => { A.result = await call('meeting.result', { meetingId: o.dataset.open }); resetRes(); renderAdmin(); window.scrollTo(0, 0); });
     const b = e.target.closest('[data-act]'); if (!b) return;
@@ -697,6 +771,7 @@ function bindAdmin() {
     busyRun(e.target.querySelector('[type=submit]'), async () => {
       const m = await call('admin.create', args);
       A.data.meetings.unshift(m); A.created = m; toast('회의를 만들었어요.'); renderAdmin();
+      if (narrow()) $('#created').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 }
@@ -738,6 +813,8 @@ function renderResult(raw, fromAdmin) {
   const runs = RS.runs = bestRuns(m, inc);
   const sel = RS.sel;
   const inSel = (d, t) => sel && sel.date === d && t >= sel.from && t < sel.to;
+  const g = { ok: [], no: [], idle: [] };
+  if (sel) ps.filter(p => inc.includes(p.id)).forEach(p => g[statusFor(m, p.id, sel)].push(esc(p.name)));
   app.innerHTML = `
   <header class="top"><h1>회의시간 맞추기</h1><span class="tag" style="background:var(--accent-soft);color:var(--accent)">결과</span>
     <p class="muted">${fromAdmin ? '' : '이 관리 링크를 가진 사람만 볼 수 있어요. 참석자에게 보내지 마세요.'}</p></header>
@@ -763,8 +840,6 @@ function renderResult(raw, fromAdmin) {
       <div class="panel detail">
         <h3>${sel ? fmtRange(sel) : '시간을 고르세요'}</h3>
         ${sel ? (() => {
-          const g = { ok: [], no: [], idle: [] };
-          ps.filter(p => inc.includes(p.id)).forEach(p => g[statusFor(m, p.id, sel)].push(esc(p.name)));
           return `<dl><dt>가능</dt><dd>${g.ok.join(', ') || '—'}</dd><dt>불가</dt><dd>${g.no.join(', ') || '—'}</dd><dt>미응답</dt><dd>${g.idle.join(', ') || '—'}</dd></dl>
           ${m.confirmed ? '' : `<button class="btn primary" data-r="confirm">이 시간으로 확정</button>`}`;
         })() : '<p class="muted" style="font-size:.86rem">그리드의 칸이나 아래 추천 시간을 누르세요.</p>'}
@@ -791,7 +866,9 @@ function renderResult(raw, fromAdmin) {
       </div>
     </div>
   </div>
+  ${sel ? `<div class="selbar"><span><b>${fmtRange(sel)}</b> <span class="muted">${g.ok.length}/${N}명 가능</span></span><button class="btn sm primary" data-r="detail">누가 되나 보기</button></div>` : ''}
   </section>`;
+  flagScroll();
 }
 let RES = null;
 const curRes = () => CTX.mode === 'admin' ? A.result : RES;
@@ -814,6 +891,7 @@ function bindResult() {
     const b = e.target.closest('[data-r]'); if (!b) return;
     const act = b.dataset.r, args = { meetingId: m.id };
     const apply = raw => { renderResult(raw, CTX.mode === 'admin'); syncList(); };
+    if (act === 'detail') return $('.detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
     if (act === 'back') { A.result = null; return busyRun(null, async () => { A.data = await call('admin.load'); A.tab = 'list'; renderAdmin(); }); }
     if (act === 'reload') return busyRun(b, async () => { apply(await call('meeting.result', args)); toast('최신 응답을 불러왔어요.'); });
     if (act === 'confirm') return busyRun(b, async () => { apply(await call('meeting.confirm', Object.assign(args, { sel: RS.sel }))); toast('회의 시간을 확정했어요.'); });
@@ -849,7 +927,7 @@ function renderRespond() {
   if (!P.persona) return wrap(`
     <p>어떤 분으로 응답하시나요?</p>
     <div class="pick">
-      <button class="panel" data-p="as-prof"><b>교수님</b><span class="muted">이름과 확인 번호(내선번호 뒷자리 4자리)를 넣으면 수업 시간이 미리 표시돼요.</span></button>
+      <button class="panel" data-p="as-prof"><b>교수학습혁신센터</b><span class="muted">이름과 확인 번호(내선번호 뒷자리 4자리)를 넣으면 수업 시간이 미리 표시돼요.</span></button>
       <button class="panel" data-p="as-ext"><b>외부 참석자</b><span class="muted">이름만 입력하고 바로 시작해요.</span></button>
     </div>${fine}`);
   if (P.persona === 'prof' && !pr) return wrap(`
@@ -895,7 +973,7 @@ function renderRespond() {
     })}
     ${fine}
     <div class="savebar"><span id="r-count"></span><button class="btn primary" data-p="save">저장하기</button></div>`);
-  updateCount();
+  updateCount(); flagScroll();
 }
 function updateCount() {
   const el = $('#r-count'); if (!el) return;
@@ -967,7 +1045,7 @@ function applyPaint(c) {
 (async () => {
   try {
     if (CTX.mode === 'master') { bindMaster(); await bootMaster(); }
-    else if (CTX.mode === 'admin') { bindAdmin(); bindResult(); await bootAdmin(); }
+    else if (CTX.mode === 'admin') { bindAdmin(); bindResult(); bindTimetable(); await bootAdmin(); }
     else if (CTX.mode === 'result') { bindResult(); await bootResult(); }
     else if (CTX.mode === 'respond') { bindRespond(); await bootRespond(); }
     else app.innerHTML = `<div class="pwrap"><div class="panel"><h3>주소를 확인해주세요</h3><p class="muted">주소가 올바르지 않거나, 회의가 끝나서 자동으로 삭제됐어요. 링크를 보낸 분께 다시 요청해주세요.</p></div></div>`;
